@@ -15,7 +15,8 @@ import { resolve, dirname } from 'path';
 import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
-import path from 'path'; // 
+import path from 'path';
+import yaml from 'js-yaml';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
@@ -96,9 +97,9 @@ async function generatePDF() {
   outputPath = resolve(outputPath);
 
  // Validate format
-  const validFormats = ['a4', 'letter', 'latex']; // Added 'latex' here
+  const validFormats = ['a4', 'letter', 'latex'];
   if (!validFormats.includes(format)) {
-    const validFormats = ['a4', 'letter', 'latex'];
+    console.error(`❌ Invalid format: ${format}. Use: a4, letter, or latex`);
     process.exit(1);
   }
 
@@ -107,16 +108,66 @@ async function generatePDF() {
     console.log("📄 Generating LaTeX source...");
     
     try {
-      const templatePath = path.join(process.cwd(), 'templates', 'cv-template.tex');
-      const texContent = await fs.readFile(templatePath, 'utf-8');
-
-      // Determine output path (changing .pdf extension to .tex)
-      const texOutputPath = outputPath.replace(/\.pdf$/, '.tex');
+      // 1. Load profile.yml
+      const profilePath = path.join(process.cwd(), 'config', 'profile.yml');
+      const profileContent = await fs.readFile(profilePath, 'utf-8');
+      const profile = yaml.load(profileContent);
       
-      await fs.writeFile(texOutputPath, texContent);
+      // 2. Load cv.md
+      const cvPath = path.join(process.cwd(), 'cv.md');
+      const cvContent = await fs.readFile(cvPath, 'utf-8');
+      
+      // 3. Parse CV for sections
+      const extractCVSection = (content, sectionName) => {
+        const regex = new RegExp(`## ${sectionName}\\s*\\n([\\s\\S]*?)(?=## |$)`, 'i');
+        const match = content.match(regex);
+        return match ? match[1].trim() : '';
+      };
+      
+      // 4. Load the LaTeX template
+      const templatePath = path.join(process.cwd(), 'templates', 'cv-template.tex');
+      let texContent = await fs.readFile(templatePath, 'utf-8');
+      
+      // 5. Extract data from profile and CV
+      const candidate = profile.candidate || {};
+      const summary = extractCVSection(cvContent, 'Professional Summary');
+      const experience = extractCVSection(cvContent, 'Work Experience');
+      const skills = extractCVSection(cvContent, 'Skills');
+      const education = extractCVSection(cvContent, 'Education');
+      
+      // This block ensures the script finds exactly what's in the .tex template
+      // Match the [[ ]] style in your .tex template
+      let finalTex = texContent
+        .replace(/\[\[FULL_NAME\]\]/g, candidate.full_name || 'Your Name')
+        .replace(/\[\[EMAIL\]\]/g, candidate.email || 'your.email@example.com')
+        .replace(/\[\[LOCATION\]\]/g, candidate.location || 'City, State')
+        .replace(/\[\[PHONE\]\]/g, candidate.phone || '+1-555-0000')
+        .replace(/\[\[LINKEDIN\]\]/g, candidate.linkedin || 'linkedin.com/in/yourprofile')
+        .replace(/\[\[GITHUB\]\]/g, candidate.github || 'github.com/yourprofile')
+        .replace(/\[\[SUMMARY\]\]/g, summary || 'Your professional summary here')
+        .replace(/\[\[EXPERIENCE\]\]/g, experience || 'Your experience here')
+        .replace(/\[\[SKILLS\]\]/g, skills || 'Your skills here')
+        .replace(/\[\[EDUCATION\]\]/g, education || 'Your education here');
+      
+      // Debug: verify replacements happened
+      const unreplacedCount = (finalTex.match(/\[\[/g) || []).length;
+      if (unreplacedCount > 0) {
+        console.warn(`⚠️  Warning: ${unreplacedCount} placeholders still unreplaced`);
+      }
+      
+      // 7. Save the populated LaTeX file to /output/ folder
+      const outputDir = path.join(process.cwd(), 'output');
+      // Create output directory if it doesn't exist
+      await fs.mkdir(outputDir, { recursive: true });
+      // Extract filename from output path (remove .pdf extension)
+      const outputFilename = path.basename(outputPath).replace(/\.pdf$/, '.tex');
+      const texOutputPath = path.join(outputDir, outputFilename);
+      
+      await fs.writeFile(texOutputPath, finalTex);
       
       console.log(`✅ LaTeX saved to: ${texOutputPath}`);
-      return; // Exit the function early so it doesn't try to launch Chromium
+      console.log(`📋 Ready for Overleaf! All placeholders replaced.`);
+      return;
     } catch (error) {
       console.error('❌ Error generating LaTeX:', error.message);
       process.exit(1);
@@ -150,52 +201,29 @@ async function generatePDF() {
     const breakdown = Object.entries(normalized.replacements).map(([k, v]) => `${k}=${v}`).join(', ');
     console.log(`🧹 ATS normalization: ${totalReplacements} replacements (${breakdown})`);
   }
-// --- START OF LATEX ADDITION ---
-  if (format === 'latex') {
-    console.log("📄 Generating LaTeX source...");
 
-    try {
-      // 1. Load the LaTeX template from the templates folder
-      const templatePath = path.join(process.cwd(), 'templates', 'cv-template.tex');
-      let texContent = await fs.readFile(templatePath, 'utf-8');
+  // Launch Chromium to render HTML → PDF
+  const browser = await chromium.launch();
+  const context = await browser.createContext();
+  const page = await context.newPage();
 
-      // 2. Map the data to LaTeX placeholders
-    console.log("🔗 Mapping data to template...");
-
-    // This ensures we have string data to work with
-    const name = profile.name || "Kevin Brown Jr.";
-    const email = profile.email || "";
-    const summaryText = html || "Resume content goes here";
-
-    let finalTex = texContent
-      .replace(/\[\[FULL_NAME\]\]/g, 'Kevin Brown Jr.')
-      .replace(/\[\[EMAIL\]\]/g, 'attaboy313.KB@gmail.com')
-      .replace(/\[\[LOCATION\]\]/g, 'Oak Park, MI')
-      .replace(/\[\[PHONE\]\]/g, '248-993-5102')
-      .replace(/\[\[SUMMARY\]\]/g, summaryText)
-      .replace(/\[\[EXPERIENCE\]\]/g, 'Security Specialist | Full-Stack Student')
-      .replace(/\[\[SKILLS\]\]/g, 'React, Node.js, FL Studio, SQL')
-      .replace(/\[\[EDUCATION\]\]/g, 'Self-Taught Developer')
-      .replace(/\[\[LINKEDIN\]\]/g, '#')
-      .replace(/\[\[GITHUB\]\]/g, '#');
-    // DEBUG: Check if finalTex actually has content now
-
-    // DEBUG: Check if finalTex actually has content now
-    if (!finalTex || finalTex.length < 100) {
-      console.log("⚠️ Warning: finalTex seems too short or empty!");
-    }
-
-      // 3. Save the file strictly inside the /output/ folder
-      const finalFileName = outputBaseName.endsWith('.tex') ? path.basename(outputBaseName) : `${path.basename(outputBaseName)}.tex`;
-      const outputPath = path.join(process.cwd(), 'output', finalFileName);
-      
-      console.log(`✅ Success! LaTeX source saved to: ${outputPath}`);
-      return; 
-    } catch (err) {
-      console.error(`❌ Error generating LaTeX: ${err.message}`);
-      process.exit(1);
-    }
+  // Set viewport to A4/Letter
+  const viewportWidth = '210mm'; // A4 width in Playwright format
+  const viewportHeight = '297mm'; // A4 height
+  
+  await page.goto(`file://${inputPath}`, { waitUntil: 'networkidle' });
+  
+  // Determine page size based on format
+  let pageSize = { format: 'A4' };
+  if (format === 'letter') {
+    pageSize = { format: 'Letter' };
   }
+  
+  await page.pdf({ path: outputPath, format: pageSize.format });
+  
+  await browser.close();
+
+  console.log(`✅ PDF saved to: ${outputPath}`);
 }
 
 generatePDF().catch((err) => {
