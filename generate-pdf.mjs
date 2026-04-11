@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * generate-pdf.mjs — HTML → PDF via Playwright
+ * generate-pdf.mjs — HTML → PDF via Playwright, or Markdown → LaTeX via Jinja2
  *
  * Usage:
- *   node career-ops/generate-pdf.mjs <input.html> <output.pdf> [--format=letter|a4]
+ *   node generate-pdf.mjs <input.html> <output.pdf> [--format=letter|a4|latex]
  *
- * Requires: @playwright/test (or playwright) installed.
+ * Formats:
+ *   a4       - Render HTML to A4 PDF (default)
+ *   letter   - Render HTML to Letter PDF
+ *   latex    - Generate LaTeX source from cv.md using Jinja2 templating
+ *
+ * Requires: @playwright/test (or playwright) installed, nunjucks for LaTeX templating.
  * Uses Chromium headless to render the HTML and produce a clean, ATS-parseable PDF.
  */
 
@@ -17,6 +22,8 @@ import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import path from 'path';
 import yaml from 'js-yaml';
+import nunjucks from 'nunjucks';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
@@ -72,6 +79,133 @@ function normalizeTextForATS(html) {
   }
 }
 
+/**
+ * Extract a section from Markdown CV content.
+ * Searches for ## SectionName and extracts content until next main section (##) or EOF.
+ * Handles both Unix (\n) and Windows (\r\n) line endings.
+ */
+function extractCVSection(content, sectionName) {
+  // Normalize line endings to \n for consistent regex matching
+  const normalized = content.replace(/\r\n/g, '\n');
+  
+  // Match the section header and capture everything until the next ## section at the start of a line
+  // Note: SubSections (###) don't stop the capture; only main sections (##) at line start do
+  const regex = new RegExp(
+    `^## ${sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$` +  // Match the exact header line
+    `\\n` +  // Required newline after header
+    `([\\s\\S]*?)` +  // Capture everything (non-greedy)
+    `(?=^## |\\Z)`,  // Until next main section (## at line start) or end of string
+    'im'
+  );
+  
+  const match = normalized.match(regex);
+  return match ? match[1].trim() : '';
+}
+
+/**
+ * Load configuration and CV data, merging with fallback to examples.
+ * If user files don't exist, uses fictional example data from examples/ folder.
+ */
+async function loadCVData() {
+  let profile = {};
+  let cvContent = '';
+
+  // Try to load user's profile.yml
+  try {
+    const profilePath = path.join(process.cwd(), 'config', 'profile.yml');
+    const profileContent = await fs.readFile(profilePath, 'utf-8');
+    profile = yaml.load(profileContent) || {};
+  } catch (err) {
+    console.log('ℹ️  Using example profile (user profile not found)');
+    try {
+      const exampleProfilePath = path.join(process.cwd(), 'examples', 'profile.example.yml');
+      const exampleProfileContent = await fs.readFile(exampleProfilePath, 'utf-8');
+      profile = yaml.load(exampleProfileContent) || {};
+    } catch (exErr) {
+      console.warn('⚠️  Could not load example profile either');
+    }
+  }
+
+  // Try to load user's cv.md
+  try {
+    const cvPath = path.join(process.cwd(), 'cv.md');
+    cvContent = await fs.readFile(cvPath, 'utf-8');
+  } catch (err) {
+    console.log('ℹ️  Using example CV (user CV not found)');
+    try {
+      const examplePath = path.join(process.cwd(), 'examples', 'cv-example.md');
+      cvContent = await fs.readFile(examplePath, 'utf-8');
+    } catch (exErr) {
+      throw new Error('Could not load CV or example: ' + exErr.message);
+    }
+  }
+
+  // Extract sections
+  const sections = {
+    summary: extractCVSection(cvContent, 'Professional Summary'),
+    experience: extractCVSection(cvContent, 'Work Experience'),
+    skills: extractCVSection(cvContent, 'Skills'),
+    education: extractCVSection(cvContent, 'Education')
+  };
+
+  // Build candidate object with fallbacks
+  const candidate = profile.candidate || {
+    full_name: 'Your Name',
+    email: 'your.email@example.com',
+    location: 'City, State',
+    phone: '+1-555-0000',
+    linkedin: 'https://linkedin.com/in/yourprofile',
+    github: 'https://github.com/yourprofile'
+  };
+
+  return { candidate, ...sections };
+}
+
+/**
+ * Generate LaTeX source using Jinja2 templating.
+ * Uses nunjucks to render the template with CV data.
+ */
+async function generateLatex(outputPath) {
+  try {
+    console.log('📄 Generating LaTeX source with Jinja2...');
+
+    // Load CV data and candidate info
+    const templateData = await loadCVData();
+
+    // Load the LaTeX template
+    const templatePath = path.join(process.cwd(), 'templates', 'cv-template.tex');
+    const templateContent = await fs.readFile(templatePath, 'utf-8');
+
+    // Configure nunjucks (Jinja2 equivalent for Node.js)
+    nunjucks.configure({ autoescape: false });
+
+    // Render template with data
+    const renderedLatex = nunjucks.renderString(templateContent, templateData);
+
+    // Verify all placeholders were replaced
+    const unrenderedCount = (renderedLatex.match(/\{\{/g) || []).length;
+    if (unrenderedCount > 0) {
+      console.warn(`⚠️  Warning: ${unrenderedCount} Jinja2 placeholders still unrendered`);
+    }
+
+    // Save to output directory
+    const outputDir = path.join(process.cwd(), 'output');
+    await fs.mkdir(outputDir, { recursive: true });
+
+    const outputFilename = path.basename(outputPath).replace(/\.pdf$/, '.tex');
+    const texOutputPath = path.join(outputDir, outputFilename);
+
+    await fs.writeFile(texOutputPath, renderedLatex);
+
+    console.log(`✅ LaTeX saved to: ${texOutputPath}`);
+    console.log(`📋 Ready for Overleaf! All Jinja2 templates rendered.`);
+    return;
+  } catch (error) {
+    console.error('❌ Error generating LaTeX:', error.message);
+    process.exit(1);
+  }
+}
+
 async function generatePDF() {
   const args = process.argv.slice(2);
 
@@ -89,90 +223,24 @@ async function generatePDF() {
   }
 
   if (!inputPath || !outputPath) {
-    console.error('Usage: node generate-pdf.mjs <input.html> <output.pdf> [--format=letter|a4]');
+    console.error('Usage: node generate-pdf.mjs <input.html> <output.pdf> [--format=letter|a4|latex]');
     process.exit(1);
   }
 
   inputPath = resolve(inputPath);
   outputPath = resolve(outputPath);
 
- // Validate format
+  // Validate format
   const validFormats = ['a4', 'letter', 'latex'];
   if (!validFormats.includes(format)) {
     console.error(`❌ Invalid format: ${format}. Use: a4, letter, or latex`);
     process.exit(1);
   }
 
-  // Handle LaTeX generation
+  // Handle LaTeX generation with Jinja2
   if (format === 'latex') {
-    console.log("📄 Generating LaTeX source...");
-    
-    try {
-      // 1. Load profile.yml
-      const profilePath = path.join(process.cwd(), 'config', 'profile.yml');
-      const profileContent = await fs.readFile(profilePath, 'utf-8');
-      const profile = yaml.load(profileContent);
-      
-      // 2. Load cv.md
-      const cvPath = path.join(process.cwd(), 'cv.md');
-      const cvContent = await fs.readFile(cvPath, 'utf-8');
-      
-      // 3. Parse CV for sections
-      const extractCVSection = (content, sectionName) => {
-        const regex = new RegExp(`## ${sectionName}\\s*\\n([\\s\\S]*?)(?=## |$)`, 'i');
-        const match = content.match(regex);
-        return match ? match[1].trim() : '';
-      };
-      
-      // 4. Load the LaTeX template
-      const templatePath = path.join(process.cwd(), 'templates', 'cv-template.tex');
-      let texContent = await fs.readFile(templatePath, 'utf-8');
-      
-      // 5. Extract data from profile and CV
-      const candidate = profile.candidate || {};
-      const summary = extractCVSection(cvContent, 'Professional Summary');
-      const experience = extractCVSection(cvContent, 'Work Experience');
-      const skills = extractCVSection(cvContent, 'Skills');
-      const education = extractCVSection(cvContent, 'Education');
-      
-      // This block ensures the script finds exactly what's in the .tex template
-      // Match the [[ ]] style in your .tex template
-      let finalTex = texContent
-        .replace(/\[\[FULL_NAME\]\]/g, candidate.full_name || 'Your Name')
-        .replace(/\[\[EMAIL\]\]/g, candidate.email || 'your.email@example.com')
-        .replace(/\[\[LOCATION\]\]/g, candidate.location || 'City, State')
-        .replace(/\[\[PHONE\]\]/g, candidate.phone || '+1-555-0000')
-        .replace(/\[\[LINKEDIN\]\]/g, candidate.linkedin || 'linkedin.com/in/yourprofile')
-        .replace(/\[\[GITHUB\]\]/g, candidate.github || 'github.com/yourprofile')
-        .replace(/\[\[SUMMARY\]\]/g, summary || 'Your professional summary here')
-        .replace(/\[\[EXPERIENCE\]\]/g, experience || 'Your experience here')
-        .replace(/\[\[SKILLS\]\]/g, skills || 'Your skills here')
-        .replace(/\[\[EDUCATION\]\]/g, education || 'Your education here');
-      
-      
-      // Debug: verify replacements happened
-      const unreplacedCount = (finalTex.match(/\[\[/g) || []).length;
-      if (unreplacedCount > 0) {
-        console.warn(`⚠️  Warning: ${unreplacedCount} placeholders still unreplaced`);
-      }
-      
-      // 7. Save the populated LaTeX file to /output/ folder
-      const outputDir = path.join(process.cwd(), 'output');
-      // Create output directory if it doesn't exist
-      await fs.mkdir(outputDir, { recursive: true });
-      // Extract filename from output path (remove .pdf extension)
-      const outputFilename = path.basename(outputPath).replace(/\.pdf$/, '.tex');
-      const texOutputPath = path.join(outputDir, outputFilename);
-      
-      await fs.writeFile(texOutputPath, finalTex);
-      
-      console.log(`✅ LaTeX saved to: ${texOutputPath}`);
-      console.log(`📋 Ready for Overleaf! All placeholders replaced.`);
-      return;
-    } catch (error) {
-      console.error('❌ Error generating LaTeX:', error.message);
-      process.exit(1);
-    }
+    await generateLatex(outputPath);
+    return;
   }
 
   console.log(`📄 Input:  ${inputPath}`);

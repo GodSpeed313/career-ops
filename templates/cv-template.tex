@@ -11,21 +11,21 @@
 \begin{document}
 
 \begin{center}
-    {\huge \textbf{[[FULL_NAME]]}} \\
-    [[LOCATION]] | [[PHONE]] | [[EMAIL]] \\
-    \href{[[LINKEDIN]]}{LinkedIn} | \href{[[GITHUB]]}{GitHub}
+    {\huge \textbf{{ '{' }}{{ candidate.full_name }}{{ '}' }}} \\
+    {{ candidate.location }} | {{ candidate.phone }} | {{ candidate.email }} \\
+    \href{{ '{' }}{{ candidate.linkedin }}{{ '}' }}{LinkedIn} | \href{{ '{' }}{{ candidate.github }}{{ '}' }}{GitHub}
 \end{center}
 
 \section{SUMMARY}
-[[SUMMARY]]
+{{ summary }}
 
 \section{EXPERIENCE}
-[[EXPERIENCE]]
+{{ experience }}
 
 \section{SKILLS}
-[[SKILLS]]
+{{ skills }}
 
 \section{EDUCATION}
-[[EDUCATION]]
+{{ education }}
 
 \end{document}
