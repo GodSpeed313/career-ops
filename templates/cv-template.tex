@@ -4,9 +4,12 @@
 \usepackage{titlesec}
 \usepackage{enumitem}
 \usepackage{hyperref}
+\usepackage{xcolor}
 
 \titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
 \titlespacing*{\section}{0pt}{12pt}{8pt}
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+\titlespacing*{\subsection}{0pt}{6pt}{4pt}
 
 \begin{document}
 
@@ -22,10 +25,12 @@
 \section{EXPERIENCE}
 {{ experience }}
 
+{{ ecosystem_section }}
+
 \section{SKILLS}
 {{ skills }}
 
 \section{EDUCATION}
 {{ education }}
 
-\end{document}
+\end{{ '{' }}document{{ '}' }}

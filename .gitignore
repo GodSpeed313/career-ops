@@ -17,6 +17,7 @@ jds/*
 
 # User config and customization (never auto-updated)
 config/profile.yml
+config/projects.yml
 portals.yml
 modes/_profile.md
 .update-dismissed
@@ -36,3 +37,18 @@ node_modules/
 .claude/memory/
 career-dashboard
 package-lock.json
+
+# SECURITY: Private projects should NOT be committed to public repo
+# These should be symlinked or referenced externally only
+# DO NOT UNCOMMENT UNLESS MOVING THESE INTO THIS REPO:
+# /Teplit/
+# /WorldCraft-Visuals/
+# /Melody-Maestro/
+
+# If you DO include private projects, add explicit rules:
+# Teplit/ - PRIVATE: Personal Replit clone in development
+# WorldCraft-Visuals/ - Consider private if unreleased
+# */node_modules/ - Project dependencies
+# */dist/ - Build outputs
+# */.env - Environment variables
+# */build/ - Build artifacts

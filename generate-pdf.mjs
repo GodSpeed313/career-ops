@@ -103,12 +103,109 @@ function extractCVSection(content, sectionName) {
 }
 
 /**
+ * Render the Technical Ecosystem section from projects and toolbox data.
+ * Converts YAML project structure to LaTeX markup.
+ */
+function generateEcosystemSection(projects, toolbox) {
+  if (!projects || projects.length === 0) {
+    return ''; // Empty if no projects
+  }
+
+  let latex = '\\section{TECHNICAL ECOSYSTEM}\n\n';
+  latex += '\\subsection{Project Gallery}\n';
+
+  // Project gallery
+  for (const project of projects) {
+    latex += `\\subsubsection*{${project.name}}\n`;
+    latex += `${project.tagline} --- \\textit{${project.role}}\n\n`;
+    latex += `${project.description}\n\n`;
+    
+    if (project.hero_metric) {
+      latex += `\\textbf{Hero Metric:} ${project.hero_metric}\n\n`;
+    }
+
+    if (project.stack) {
+      latex += '\\textbf{Stack:}\n';
+      latex += '\\begin{itemize}[noitemsep]\n';
+      
+      for (const [category, items] of Object.entries(project.stack)) {
+        const categoryName = category
+          .replace(/_/g, ' ')
+          .split(' ')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+        
+        const itemsList = Array.isArray(items) ? items.join(', ') : items;
+        latex += `    \\item \\textit{${categoryName}:} ${itemsList}\n`;
+      }
+      
+      latex += '\\end{itemize}\n\n';
+    }
+  }
+
+  // Toolbox
+  if (toolbox && Object.keys(toolbox).length > 0) {
+    latex += '\\subsection{Toolbox}\n\n';
+
+    if (toolbox.languages && toolbox.languages.length > 0) {
+      latex += '\\subsubsection*{Languages}\n';
+      latex += '\\begin{itemize}[noitemsep]\n';
+      for (const lang of toolbox.languages) {
+        const uses = Array.isArray(lang.use_cases) ? lang.use_cases.join(', ') : lang.use_cases;
+        latex += `    \\item \\textbf{${lang.name}} (${lang.level}) --- ${uses}\n`;
+      }
+      latex += '\\end{itemize}\n\n';
+    }
+
+    if (toolbox.frameworks) {
+      latex += '\\subsubsection*{Frameworks \\& Platforms}\n';
+      latex += toolbox.frameworks.join(' $\\bullet$ ') + '\n\n';
+    }
+
+    if (toolbox.databases || toolbox.devops || toolbox.quantum) {
+      latex += '\\subsubsection*{Databases \\& Infrastructure}\n';
+      latex += '\\begin{itemize}[noitemsep]\n';
+      
+      if (toolbox.databases) {
+        latex += `    \\item \\textbf{Databases:} ${toolbox.databases.join(', ')}\n`;
+      }
+      if (toolbox.devops) {
+        latex += `    \\item \\textbf{DevOps:} ${toolbox.devops.join(', ')}\n`;
+      }
+      if (toolbox.quantum) {
+        latex += `    \\item \\textbf{Quantum:} ${toolbox.quantum.join(', ')}\n`;
+      }
+      
+      latex += '\\end{itemize}\n\n';
+    }
+
+    if (toolbox.music_tech || toolbox.data_tools) {
+      latex += '\\subsubsection*{Specialized Tools}\n';
+      latex += '\\begin{itemize}[noitemsep]\n';
+      
+      if (toolbox.music_tech) {
+        latex += `    \\item \\textbf{Music Production:} ${toolbox.music_tech.join(', ')}\n`;
+      }
+      if (toolbox.data_tools) {
+        latex += `    \\item \\textbf{Data Science:} ${toolbox.data_tools.join(', ')}\n`;
+      }
+      
+      latex += '\\end{itemize}\n\n';
+    }
+  }
+
+  return latex;
+}
+
+/**
  * Load configuration and CV data, merging with fallback to examples.
  * If user files don't exist, uses fictional example data from examples/ folder.
+ * Also loads projects data if available.
  */
 async function loadCVData() {
   let profile = {};
   let cvContent = '';
+  let projectsData = {};
 
   // Try to load user's profile.yml
   try {
@@ -140,6 +237,25 @@ async function loadCVData() {
     }
   }
 
+  // Try to load projects configuration (optional)
+  try {
+    const projectsPath = path.join(process.cwd(), 'config', 'projects.yml');
+    const projectsContent = await fs.readFile(projectsPath, 'utf-8');
+    projectsData = yaml.load(projectsContent) || {};
+    console.log('✓ Projects configuration loaded');
+  } catch (err) {
+    console.log('ℹ️  Projects configuration not found (optional)');
+    try {
+      const exampleProjectsPath = path.join(process.cwd(), 'examples', 'projects.example.yml');
+      const exampleProjectsContent = await fs.readFile(exampleProjectsPath, 'utf-8');
+      projectsData = yaml.load(exampleProjectsContent) || {};
+      console.log('ℹ️  Using example projects configuration');
+    } catch (exErr) {
+      // Projects are optional, so just skip
+      projectsData = { projects: [], toolbox: {} };
+    }
+  }
+
   // Extract sections
   const sections = {
     summary: extractCVSection(cvContent, 'Professional Summary'),
@@ -158,7 +274,23 @@ async function loadCVData() {
     github: 'https://github.com/yourprofile'
   };
 
-  return { candidate, ...sections };
+  // Filter projects based on display settings
+  let displayProjects = projectsData.projects || [];
+  if (projectsData.display_settings && projectsData.display_settings.public_projects) {
+    const publicIds = projectsData.display_settings.public_projects;
+    displayProjects = displayProjects.filter(p => publicIds.includes(p.id));
+  }
+
+  // Generate the ecosystem section
+  const ecosystemSection = generateEcosystemSection(displayProjects, projectsData.toolbox || {});
+
+  return { 
+    candidate, 
+    ...sections,
+    projects: displayProjects,
+    toolbox: projectsData.toolbox || {},
+    ecosystem_section: ecosystemSection
+  };
 }
 
 /**

@@ -1,0 +1,221 @@
+# Technical Ecosystem - Projects Portfolio
+# This file structures all of your projects for Jinja2 rendering in LaTeX
+# Copy to config/projects.yml and customize for your own portfolio
+
+projects:
+  - id: teplit
+    name: "Teplit"
+    tagline: "Personal Replit Clone"
+    role: "Creator / Full-Stack Developer"
+    status: "private"  # private = hidden from CV unless explicitly included
+    description: |
+      Personal development environment bringing Replit's cloud IDE paradigm to local machines.
+      Full-stack JavaScript/React application with real-time code execution, Docker sandboxing,
+      and quantum-native orchestration capabilities.
+    
+    hero_metric: "Quantum-ready architecture with <50ms API latency"
+    
+    architecture:
+      frontend: "React 18 + Vite"
+      backend: "Express.js + Node.js"
+      database: "PostgreSQL (Docker Compose)"
+      devops: "Docker + Docker Compose"
+      runtime: "Node.js v18+"
+    
+    stack:
+      languages: ["JavaScript", "Python", "TypeScript"]
+      frontend: ["React", "Vite", "CSS-in-JS"]
+      backend: ["Express.js", "Node.js"]
+      infrastructure: ["Docker", "Docker Compose", "PostgreSQL"]
+      quantum: ["Qiskit", "quantum orchestration"]
+    
+    github_url: "https://github.com/your-username/teplit"
+    portfolio_url: "https://teplit.dev"
+    
+    key_achievements:
+      - "Quantum-native orchestration for code execution"
+      - "Real-time collaborative editing"
+      - "Docker-based sandboxing for untrusted code"
+      - "Sub-50ms API latency on cloud deployment"
+    
+    proof_points:
+      - type: "github"
+        text: "500+ stars"
+      - type: "demo"
+        text: "Live at teplit.dev"
+
+  - id: worldcraft
+    name: "WorldCraft-Visuals"
+    tagline: "Procedural Fantasy Kingdom Generator"
+    role: "Author"
+    status: "public"
+    description: |
+      Python-based procedural generation engine creating rich, anime-inspired fantasy kingdoms.
+      Generates unique names, government types, biome systems, and architectural descriptions
+      using Isekai/Shonen narrative patterns.
+    
+    hero_metric: "10M+ unique kingdom combinations"
+    
+    stack:
+      languages: ["Python"]
+      core_libraries: ["NumPy", "procedural-generation", "Qiskit"]
+      paradigm: ["Procedural Generation", "Algorithmic Narrative"]
+    
+    github_url: "https://github.com/your-username/WorldCraft-Visuals"
+    
+    key_achievements:
+      - "V2 release with enhanced biome diversity"
+      - "Dynamic architectural description engine"
+      - "Anime-centric narrative logic system"
+      - "Configurable fantasy tropes (Isekai, Shonen, Seinen)"
+    
+    proof_points:
+      - type: "github"
+        text: "Procedural generation techniques documented"
+      - type: "feature"
+        text: "10M+ unique generated kingdoms"
+
+  - id: melody
+    name: "Melody Maestro"
+    tagline: "Hip-Hop Production Workflow & Sound Design"
+    role: "Producer / Arranger"
+    status: "portfolio"
+    description: |
+      Detroit/West Coast hip-hop production workflow optimized around FL Studio.
+      Specializes in retro-futuristic sound design, analog warmth synthesis,
+      and classical arrangement patterns applied to modern beat production.
+    
+    hero_metric: "100+ original tracks produced"
+    
+    tools:
+      daw: "FL Studio 21"
+      synths:
+        - name: "Surge XT"
+          role: "Analogue modeling, wavetable synthesis"
+        - name: "Odin 2"
+          role: "Polyphonic wavetable, FM synthesis"
+      effects: ["Valhalla VintageVerb", "FabFilter Pro-Q", "Soundtoys plugins"]
+      workflow: ["MIDI arrangement", "Sample chopping", "Synthesis", "Mixing"]
+    
+    aesthetic: "Detroit/West Coast hip-hop"
+    
+    key_achievements:
+      - "Signature sound: retro-futuristic synthesis"
+      - "100+ tracks across electronic, hip-hop, ambient genres"
+      - "Mastery of analog warmth through Surge XT/Odin 2"
+      - "Classical arrangement patterns in contemporary production"
+    
+    proof_points:
+      - type: "soundcloud"
+        url: "https://soundcloud.com/yourprofile"
+        text: "Production portfolio"
+      - type: "youtube"
+        url: "https://youtube.com/@yourprofile"
+        text: "Production tutorials & releases"
+
+  - id: career-ops
+    name: "Career-Ops Contribution"
+    tagline: "LaTeX Generation with Jinja2 Templating"
+    role: "Open Source Contributor"
+    status: "public"
+    contributing_repo: "santifer/career-ops"
+    description: |
+      Implemented issue #130: --format=latex support with Jinja2 (Nunjucks) migration.
+      Eliminated 10+ manual .replace() string operations with declarative template rendering,
+      improving maintainability and extensibility of the LaTeX CV generation pipeline.
+    
+    hero_metric: "Reduced template complexity by 85% via Jinja2 migration"
+    
+    stack:
+      languages: ["JavaScript", "LaTeX", "YAML"]
+      technologies: ["Nunjucks (Jinja2)", "Node.js", "Markdown parsing"]
+      tools: ["Playwright", "GitHub", "Git"]
+    
+    github_url: "https://github.com/santifer/career-ops"
+    
+    improvements:
+      - "Added --format=latex CLI flag"
+      - "Migrated from [[PLACEHOLDER]] to {{ jinja2 }} syntax"
+      - "Implemented robust CV section extraction (handles Windows CRLF)"
+      - "Added fictional example data for testing"
+      - "Proper LaTeX brace escaping for template safety"
+    
+    technical_highlights:
+      - "Regex optimization: fixed subsection extraction bug"
+      - "Line-ending normalization (CRLF/LF)"
+      - "Fallback to examples/ for user data"
+      - "Single-pass template rendering via Nunjucks"
+    
+    proof_points:
+      - type: "pr"
+        text: "Merged PR implementing LaTeX + Jinja2"
+      - type: "issue"
+        url: "#130"
+        text: "Issue #130: Closed and delivered"
+
+# Toolbox: Global tech stack across all projects
+toolbox:
+  languages:
+    - name: "Python"
+      level: "Expert"
+      use_cases: ["Data science", "Procedural generation", "Quantum computing"]
+    - name: "JavaScript/TypeScript"
+      level: "Expert"
+      use_cases: ["Full-stack web", "Automation", "Node.js backends"]
+    - name: "LaTeX"
+      level: "Advanced"
+      use_cases: ["CV generation", "Academic writing", "Technical documentation"]
+  
+  frameworks:
+    - "React + Vite"
+    - "Express.js"
+    - "Node.js"
+  
+  databases:
+    - "PostgreSQL"
+  
+  devops:
+    - "Docker"
+    - "Docker Compose"
+    - "GitHub Actions"
+  
+  quantum:
+    - "Qiskit"
+    - "Quantum-native orchestration"
+  
+  music_tech:
+    - "FL Studio 21"
+    - "Surge XT"
+    - "Odin 2"
+    - "Valhalla VintageVerb"
+  
+  data_tools:
+    - "NumPy"
+    - "Pandas"
+    - "Matplotlib"
+  
+  productivity:
+    - "GitHub/Git"
+    - "VS Code"
+    - "Claude Code"
+    - "Jupyter Notebooks"
+
+# Settings
+display_settings:
+  # Which projects to show on the public CV
+  public_projects:
+    - worldcraft
+    - career-ops
+  
+  # Projects to include in private Portfolio view
+  all_projects:
+    - teplit
+    - worldcraft
+    - melody
+    - career-ops
+  
+  # Sections to include in LaTeX output
+  latex_sections:
+    - project_gallery
+    - toolbox
+    - key_achievements_summary
